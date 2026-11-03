@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>鍵盤樂園</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='8' y='8' width='84' height='84' rx='20' fill='%23ffd51e' stroke='%23222' stroke-width='8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css?v=20261103b">
+</head>
+<body>
+
+<!-- 首頁 -->
+<section id="home" class="screen active">
+  <div class="home-box">
+    <div class="logo-keys"><span>鍵</span><span>盤</span><span>樂</span><span>園</span></div>
+    <div id="stepClass" class="step">
+      <p class="home-sub">你是哪一班？</p>
+      <div class="class-pick" id="classPick"></div>
+      <button class="pill guest-btn" id="btnGuest">老師／訪客（不記成績）</button>
+    </div>
+    <div id="stepSeat" class="step hidden">
+      <p class="home-sub"><b id="seatCls"></b>　你是幾號？</p>
+      <div class="seat-pick" id="seatPick"></div>
+      <button class="pill" id="btnBackClass">← 選錯班了</button>
+    </div>
+    <div id="stepPin" class="step hidden">
+      <p class="home-sub"><b id="pinWho"></b>　請輸入你的密碼</p>
+      <div class="pin-row"><div class="pin-box empty" id="pinBox">　</div><button class="pill" id="btnPinEye">👁 看密碼</button></div>
+      <p class="load-msg" id="pinMsg"></p>
+      <div class="pin-btns"><button class="pill" id="btnPinBack">← 選錯號碼了</button><button class="pin-ok" id="btnPinOk">確定 <kbd>Enter</kbd></button></div>
+    </div>
+    <div id="stepLoad" class="step hidden">
+      <p class="home-sub"><span id="loadWho"></span><br><span class="spin">☁</span> 正在拿你的星星…</p>
+      <button class="pill" id="btnLoadCancel">← 選錯號碼了</button>
+    </div>
+    <div id="stepMode" class="step hidden">
+      <p class="home-sub"><span id="whoHome" class="who-big"></span> <button class="pill" id="btnSwitch">不是我，換人</button></p>
+      <p class="load-msg" id="loadMsg"></p>
+      <div class="mode-pick">
+        <button class="mode-btn" data-mode="en"><b>ABC</b><span>英文鍵位</span></button>
+        <button class="mode-btn" data-mode="zy"><b>ㄅㄆㄇ</b><span>注音鍵位</span></button>
+      </div>
+    </div>
+    <p class="home-note">本遊戲看的是「實體按鍵的位置」，不用切換輸入法，中英文狀態都能玩。<br>星星會存到雲端，換一台電腦、下次上課，輸入密碼就能接著玩。</p>
+  </div>
+</section>
+
+<!-- 關卡地圖 -->
+<section id="map" class="screen">
+  <header class="map-head">
+    <button id="btnHome" class="pill">⌂ 首頁</button>
+    <div class="seg" id="segMode">
+      <button data-mode="en">ABC 英文</button><button data-mode="zy">ㄅㄆㄇ 注音</button>
+    </div>
+    <div class="seg" id="segDiff">
+      <button data-diff="easy">輕鬆</button><button data-diff="normal">普通</button><button data-diff="hard">挑戰</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="optColors"> 手指顏色</label>
+    <label class="chk"><input type="checkbox" id="optSound"> 音效</label>
+    <label class="chk"><input type="checkbox" id="optUnlock"> 全部解鎖（老師用）</label>
+    <div class="who" id="mapWho"></div>
+    <div class="cloud-stat"></div>
+    <div class="total" id="totalStars"></div>
+  </header>
+  <p class="diff-note" id="diffNote"></p>
+  <div id="worlds"></div>
+  <div id="pwBox" class="overlay pw-box hidden">
+    <form class="res-card" id="pwForm">
+      <h2>🔒 老師密碼</h2>
+      <p>輸入密碼才能全部解鎖</p>
+      <input type="password" id="pwInput" autocomplete="off">
+      <p class="pw-err" id="pwErr"></p>
+      <div class="res-btns"><button type="button" id="pwCancel">取消</button><button type="submit" class="primary">確定</button></div>
+    </form>
+  </div>
+</section>
+
+<!-- 遊戲 -->
+<section id="game" class="screen">
+  <header class="hud">
+    <button id="btnQuit" class="pill">← 地圖 (Esc)</button>
+    <div id="hudTitle" class="hud-title"></div>
+    <div class="bar"><i id="hudBar"></i></div>
+    <div id="hudStat" class="hud-stat"></div>
+  </header>
+  <div id="play" class="play"></div>
+  <div class="kbzone">
+    <div id="fingerHint" class="finger-hint"></div>
+    <div id="kb" class="kb"></div>
+    <svg id="hands" viewBox="0 0 1000 200" preserveAspectRatio="xMidYMin slice"></svg>
+  </div>
+  <div id="result" class="overlay hidden"></div>
+</section>
+
+<script src="words.js?v=20261103b"></script>
+<script src="words-extra.js?v=20261103b"></script>
+<script src="cloud.js?v=20261103b"></script>
+<script src="game.js?v=20261103b"></script>
+</body>
+</html>
