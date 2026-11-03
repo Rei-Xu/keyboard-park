@@ -95,9 +95,9 @@
 
   // ---------- 難度 ----------
   const DIFF = {
-    easy:   { name: '輕鬆', note: '輕鬆：地鼠、荷葉、蘋果都會一直等你，字母雲落地後會停住，鍵盤上會亮出下一個鍵。', cubeN: 16, moleN: 12, moleTime: 0,    mouthN: 12, fall: 0.07, maxClouds: 1, gap: 900,  wordN: 6,  wordTime: null, hint: true },
-    normal: { name: '普通', note: '普通：地鼠會逃走、荷葉會下沉、蘋果會掉下來，要在時間內打完，鍵盤上會亮出下一個鍵。', cubeN: 24, moleN: 18, moleTime: 3200, mouthN: 18, fall: 0.10, maxClouds: 2, gap: 1500, wordN: 10, wordTime: { base: 3000, per: 900 }, hint: true },
-    hard:   { name: '挑戰', note: '挑戰：速度更快、題目更多，而且鍵盤「不會」提示下一個鍵，要靠手指記憶！',             cubeN: 32, moleN: 24, moleTime: 1800, mouthN: 24, fall: 0.16, maxClouds: 3, gap: 1000, wordN: 14, wordTime: { base: 2000, per: 550 }, hint: false },
+    easy:   { name: '輕鬆', note: '🌳 輕鬆・草原：地鼠、荷葉、蘋果都會一直等你，字母雲落地後會停住，鍵盤上會亮出下一個鍵。', cubeN: 16, moleN: 12, moleTime: 0,    mouthN: 12, fall: 0.07, maxClouds: 1, gap: 900,  wordN: 6,  wordTime: null, hint: true },
+    normal: { name: '普通', note: '🌊 普通・海洋：螃蟹會逃走、泡泡會飄走、小魚會游走，要在時間內打完，鍵盤上會亮出下一個鍵。', cubeN: 24, moleN: 18, moleTime: 3200, mouthN: 18, fall: 0.10, maxClouds: 2, gap: 1500, wordN: 10, wordTime: { base: 3000, per: 900 }, hint: true },
+    hard:   { name: '挑戰', note: '🚀 挑戰・太空：速度更快、題目更多，鍵盤「不會」提示下一個鍵，還有假外星人和看不見的隕石，要靠手指記憶！',             cubeN: 32, moleN: 24, moleTime: 1800, mouthN: 24, fall: 0.16, maxClouds: 3, gap: 1000, wordN: 14, wordTime: { base: 2000, per: 550 }, hint: false },
   };
 
   // ---------- 關卡 ----------
@@ -348,8 +348,13 @@
     play.innerHTML = '<div class="cube-word"></div><div class="cube-stage"><div class="track"></div>' +
       '<div class="hero"><i class="eye l"></i><i class="eye r"></i><i class="smile"></i></div></div>';
     const stageEl = $('.cube-stage', play), track = $('.track', play), hero = $('.hero', play), wordEl = $('.cube-word', play);
-    const els = tiles.map(t => { const e = h('div', 'tile' + (t.small ? ' small' : ''), esc(t.label)); track.appendChild(e); return e; });
+    const els = tiles.map((t, k) => {
+      const e = h('div', 'tile' + (t.small ? ' small' : ''), esc(t.label));
+      e.style.setProperty('--d', (-(k * 0.37) % 2).toFixed(2) + 's');   // 海洋版泡泡上下飄，每顆不同步
+      track.appendChild(e); return e;
+    });
     const goal = h('div', 'tile goal', '<div class="friend"><i class="eye l"></i><i class="eye r"></i><i class="smile"></i></div>');
+    const SEE = save.diff === 'hard' ? 4 : 0;   // 太空版：只看得到前面 4 顆隕石
     track.appendChild(goal);
     let i = 0;
 
@@ -358,7 +363,7 @@
       track.style.transition = anim ? 'transform .22s ease-out' : 'none';
       track.style.transform = `translateX(${x0 - i * step}px)`;
       hero.style.left = (x0 + (tw - hero.offsetWidth) / 2) + 'px';
-      els.forEach((e, k) => e.classList.toggle('cur', k === i));
+      els.forEach((e, k) => { e.classList.toggle('cur', k === i); if (SEE) e.classList.toggle('dark', k >= i + SEE); });
       wordEl.textContent = tiles[i] && tiles[i].word ? tiles[i].word : '';
     }
     requestAnimationFrame(() => place(false));
@@ -396,17 +401,39 @@
       field.appendChild(el); holes.push(el);
     }
     let n = 0, cur = null, curHole = -1, timer = 0;
+    // 太空版（挑戰）：偶爾冒出紅色假外星人，牌子打叉，不能打；不算題數，打了就跟按錯一樣算失誤
+    let fake = null, fakeHole = -1;
+    const FAKES = save.diff === 'hard' ? uniq(run.stage.keys.concat(run.stage.review)) : [];
 
-    function spawn() {
-      if (n >= N) { cur = null; run.later(run.finish, 400); return; }
+    function hideFake() {
+      if (fakeHole < 0) return;
+      const hole = holes[fakeHole];
+      hole.className = 'hole fake';
+      run.later(() => { if (!hole.classList.contains('up')) hole.className = 'hole'; }, 200);
+      fake = null; fakeHole = -1;
+    }
+    function spawnFake() {
+      const choices = FAKES.filter(c => cur && c !== cur.code);
+      if (!choices.length || fakeHole >= 0) return;
       let hi;
       do { hi = rand(HOLES); } while (hi === curHole);
+      fakeHole = hi; fake = choices[rand(choices.length)];
+      const hole = holes[hi];
+      $('.sign', hole).textContent = label(fake);
+      hole.className = 'hole up fake';
+      run.later(hideFake, 1500);
+    }
+    function spawn() {
+      if (n >= N) { cur = null; hideFake(); run.later(run.finish, 400); return; }
+      let hi;
+      do { hi = rand(HOLES); } while (hi === curHole || hi === fakeHole);
       curHole = hi; cur = seq[n++];
       const hole = holes[hi];
       $('.sign', hole).textContent = cur.label;
       hole.className = 'hole up';
       run.updateHint();
       if (d.moleTime) timer = run.later(escape, d.moleTime);
+      if (FAKES.length && n > 1 && Math.random() < 0.35) run.later(spawnFake, 150 + rand(400));
     }
     function escape() {
       if (!cur) return;
@@ -423,6 +450,7 @@
       key(code) {
         if (!cur) return null;
         const hole = holes[curHole];
+        if (fake && code === fake) { retrigger(holes[fakeHole], 'tease'); return false; }   // 打到假外星人
         if (code !== cur.code) { retrigger(hole, 'tease'); return false; }
         clearTimeout(timer);
         hole.className = 'hole up bonk';
@@ -444,8 +472,14 @@
 
   function MouthGame(run, play) {
     const d = DIFF[save.diff], N = d.mouthN, seq = genKeys(run.stage, N), FLOOR = 0.56;
-    play.innerHTML = `<div class="sky"></div><div class="ground"></div><div class="mouth">${MOUTH_SVG}</div>`;
+    // 海洋版：泡泡從海底往上飄、左右搖擺，鯨魚在上面吞；太空版：流星斜斜往下掉，火箭在下面打。
+    // 內部的 y 一律是「0 → FLOOR 越來越危險」，只有畫的位置不同，所以計分與失誤規則三版都一樣。
+    const SEA = save.diff === 'normal', SPACE = save.diff === 'hard';
+    const who = SEA ? '<span class="mo-emoji">🐳</span>' : SPACE ? '<span class="mo-emoji">🚀</span>' : MOUTH_SVG;
+    play.innerHTML = `<div class="sky"></div><div class="ground"></div><div class="mouth">${who}</div>`;
     const sky = $('.sky', play), mouth = $('.mouth', play);
+    const drawX = c => SEA ? c.x + 5 * Math.sin(c.y * 14 + c.ph) : SPACE ? c.x + c.dir * (c.y + 0.15) * 30 : c.x;
+    const drawY = c => SEA ? 0.71 - c.y : c.y;
     let clouds = [], spawned = 0, handled = 0, last = -1e9, prev = 0, ending = false, lowest = null;
 
     function spawn(now) {
@@ -456,9 +490,12 @@
         if (clouds.every(o => Math.abs(o.x - x) > 16 || o.y > 0.3)) break;
       }
       const el = h('div', 'cloud', `<span>${esc(c.label)}</span>`);
-      el.style.left = x + '%'; el.style.top = '-15%';
+      if (SPACE) x = 10 + Math.random() * 45;   // 流星往右下或左下斜飛，起點放在不會飛出畫面的地方
+      const o = { code: c.code, el, x, y: -0.15, ph: Math.random() * 6.3, dir: Math.random() < 0.5 ? 1 : -1 };
+      if (SPACE && o.dir < 0) o.x = x + 35;
+      el.style.left = drawX(o) + '%'; el.style.top = drawY(o) * 100 + '%';
       sky.appendChild(el);
-      clouds.push({ code: c.code, el, x, y: -0.15 });
+      clouds.push(o);
       last = now;
     }
     function remove(c) { clouds = clouds.filter(o => o !== c); handled++; run.progress(handled, N); }
@@ -473,7 +510,8 @@
           if (save.diff === 'easy') { c.y = FLOOR; c.el.classList.add('landed'); }
           else { run.miss(c.code); c.el.classList.add('rain'); setTimeout(() => c.el.remove(), 500); remove(c); return; }
         }
-        c.el.style.top = (c.y * 100) + '%';
+        c.el.style.top = (drawY(c) * 100) + '%';
+        if (SEA || SPACE) c.el.style.left = drawX(c) + '%';
       });
       const low = clouds.reduce((a, c) => (!a || c.y > a.y ? c : a), null);
       if (low !== lowest) { lowest = low; $$('.cloud.low', sky).forEach(e => e.classList.remove('low')); if (low && d.hint) low.el.classList.add('low'); run.updateHint(); }
@@ -487,10 +525,10 @@
         if (!clouds.length) return null;
         const m = clouds.filter(c => c.code === code).sort((a, b) => b.y - a.y)[0];
         if (!m) { retrigger(mouth, 'no'); return false; }
-        mouth.style.left = m.x + '%';
+        mouth.style.left = drawX(m) + '%';
         retrigger(mouth, 'chomp');
         m.el.classList.add('eaten');
-        m.el.style.top = '78%';
+        m.el.style.top = SEA ? '6%' : '78%';
         setTimeout(() => m.el.remove(), 300);
         remove(m);
         lowest = null;
@@ -699,6 +737,25 @@
   };
   const GAME_ORDER = ['cube', 'mole', 'mouth'];
 
+  // 2026-11-03：三種難度三套主題（輕鬆＝草原、普通＝海洋、挑戰＝太空）。遊戲代號不變，星星與雲端成績照舊。
+  const SKIN = {
+    normal: {
+      cube:    { name: '小丑魚回家', icon: '🐠', how: '幫小丑魚踩著泡泡游回珊瑚的家！照順序按下泡泡上的鍵，泡泡會上下飄喔。' },
+      mole:    { name: '敲螃蟹',     icon: '🦀', how: '螃蟹舉著牌子從沙洞冒出來，還會橫著走！按下牌子上的鍵把牠敲回去。' },
+      mouth:   { name: '鯨魚吞泡泡', icon: '🐳', how: '泡泡從海底往上飄，按對的鍵讓鯨魚一口吞掉！飄到水面就跑掉囉。' },
+      frog:    { name: '海豚跳圈圈', icon: '🐬', how: '每個圈圈上都有一個字，把「整個字」打完，海豚就會跳過去！' },
+      giraffe: { name: '海鰻吃小魚', icon: '🐟', how: '每打對一個鍵，海鰻的嘴巴就張大一點，整個字打完就「咬」到小魚！打錯會嘴巴脫臼，要從頭再打一次喔。' },
+    },
+    hard: {
+      cube:    { name: '太空漫步',     icon: '👨‍🚀', how: '太空人踩著隕石回太空站！太空很暗，只看得到前面幾顆隕石，要邊走邊看。' },
+      mole:    { name: '打外星人',     icon: '👾', how: '外星人從隕石坑冒出來，按下牌子上的鍵把牠打回去！小心紅色的假外星人，牌子打叉的「不能打」！' },
+      mouth:   { name: '火箭打流星',   icon: '🚀', how: '流星斜斜的飛下來，按對的鍵讓火箭把它打碎！' },
+      frog:    { name: '星球跳跳',     icon: '🪐', how: '每顆星球上都有一個字，把「整個字」打完，太空人就會跳到下一顆星球！' },
+      giraffe: { name: '機器人抓星星', icon: '🤖', how: '每打對一個鍵，機器手臂的夾子就張大一點，整個字打完就「夾」住星星！打錯夾子會卡住，要從頭再打一次喔。' },
+    },
+  };
+  const skinOf = gk => Object.assign({}, GAMES[gk], (SKIN[save.diff] || {})[gk]);
+
   // ---------- 畫面切換 ----------
   function showScreen(id) {
     $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
@@ -718,6 +775,7 @@
     $('#optSound').checked = !!save.sound;
     $('#optUnlock').checked = !!save.unlockAll;
     $('#diffNote').textContent = DIFF[save.diff].note;
+    document.body.dataset.diff = save.diff;
     const box = $('#worlds');
     box.innerHTML = '';
     let got = 0, max = 0;
@@ -737,7 +795,8 @@
         gamesOf(wi).forEach(gk => {
           const n = getStars(st.id, gk);
           got += n; max += 3;
-          const b = h('button', 'gbtn', `<span class="gi">${GAMES[gk].icon}</span><span class="gn">${GAMES[gk].name}</span><span class="gs">${starStr(n)}</span>`);
+          const S = skinOf(gk);
+          const b = h('button', 'gbtn', `<span class="gi">${S.icon}</span><span class="gn">${S.name}</span><span class="gs">${starStr(n)}</span>`);
           b.disabled = !open;
           b.addEventListener('click', () => startGame(wi, si, gk));
           games.appendChild(b);
@@ -787,7 +846,8 @@
   function startGame(wi, si, gk) {
     stopRun();
     if (document.activeElement) document.activeElement.blur();
-    const stage = getStage(wi, si), G = GAMES[gk];
+    const stage = getStage(wi, si), G = skinOf(gk);
+    document.body.dataset.diff = save.diff;
     showScreen('game');
     $('#game').className = 'screen active ' + G.theme;
     $('#result').className = 'overlay hidden';
@@ -809,7 +869,7 @@
   }
 
   function showIntro(play, stage, gk) {
-    const G = GAMES[gk];
+    const G = skinOf(gk);
     const few = stage.keys.length <= 3 ? stage.keys : null;
     let how = G.how;
     if (stage.words && gk === 'cube') how = save.mode === 'zy'
