@@ -762,8 +762,14 @@
     document.body.dataset.screen = id;
   }
 
-  const getStars = (sid, gk) => book[save.mode][`${sid}:${gk}`] || 0;
-  const maxStars = () => WORLDS.reduce((a, w, wi) => a + w.stages.length * gamesOf(wi).length * 3, 0);
+  // 2026-11-12：星星每個難度各存一份。輕鬆沿用舊鍵 '1-1:cube'；普通/挑戰在遊戲代號後加 n/h（'1-1:cuben'、'1-1:cubeh'），
+  // 這樣舊的雲端 Code.gs（鍵只收 a-z）也收得下，輕鬆過關不會連帶解鎖普通/挑戰。
+  const DSUF = { easy: '', normal: 'n', hard: 'h' };
+  const gkey = gk => gk + (DSUF[save.diff] || '');
+  const starKey = (sid, gk) => `${sid}:${gkey(gk)}`;
+  const getStars = (sid, gk) => book[save.mode][starKey(sid, gk)] || 0;
+  // 雲端總表的「滿分星星」＝三個難度合計
+  const maxStars = () => WORLDS.reduce((a, w, wi) => a + w.stages.length * gamesOf(wi).length * 3, 0) * 3;
   const stageStars = (wi, si) => gamesOf(wi).reduce((a, gk) => a + getStars(`${wi + 1}-${si + 1}`, gk), 0);
   const isOpen = (wi, si) => save.unlockAll || si === 0 || stageStars(wi, si - 1) > 0;
   const starStr = n => '★'.repeat(n) + '<span class="off">' + '★'.repeat(3 - n) + '</span>';
@@ -930,11 +936,11 @@
     const stars = acc >= 0.95 ? 3 : acc >= 0.85 ? 2 : 1;
     const secs = Math.max(1, (performance.now() - r.t0) / 1000);
     const kpm = Math.round(r.correct * 60 / secs);
-    const k = `${r.stage.id}:${r.gk}`;
+    const k = starKey(r.stage.id, r.gk);
     const best = getStars(r.stage.id, r.gk);
     if (stars > best) { book[save.mode][k] = stars; persist(); }
     if (player && !player.guest && window.KBCLOUD) {
-      KBCLOUD.push({ cls: player.cls, seat: player.seat, token: player.token, mode: save.mode, diff: save.diff, stage: r.stage.id, game: r.gk,
+      KBCLOUD.push({ cls: player.cls, seat: player.seat, token: player.token, mode: save.mode, diff: save.diff, stage: r.stage.id, game: gkey(r.gk),
         stars, acc: Math.round(acc * 100), kpm, correct: r.correct, miss: r.wrong + r.missed, secs: Math.round(secs),
         snap: book[save.mode], maxStars: maxStars() });
     }
